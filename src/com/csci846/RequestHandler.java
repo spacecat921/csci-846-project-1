@@ -61,15 +61,20 @@ public class RequestHandler extends Thread {
 		 *
 		 */
 		try {
-			InputStream input = clientSocket.getInputStream();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+
+			proxyToClientBufferedReader = new BufferedReader(new InputStreamReader(inFromClient));
+
+			// TODO: This is the first line of an HTTP request:
+			//  GET http://www.testingmcafeesites.com/ HTTP/1.1
+			// Parse first line, first word, if it is 'GET' then continue
+			// Second word of first line is the URL
 
 			OutputStream output = clientSocket.getOutputStream();
 
 			String text;
 
 			do {
-				text = reader.readLine();
+				text = proxyToClientBufferedReader.readLine();
 				System.out.println("Server: " + text);
 			} while (text != null);
 
