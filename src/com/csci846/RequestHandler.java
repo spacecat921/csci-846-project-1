@@ -64,19 +64,30 @@ public class RequestHandler extends Thread {
 
 			proxyToClientBufferedReader = new BufferedReader(new InputStreamReader(inFromClient));
 
-			// TODO: This is the first line of an HTTP request:
-			//  GET http://www.testingmcafeesites.com/ HTTP/1.1
-			// Parse first line, first word, if it is 'GET' then continue
-			// Second word of first line is the URL
-
 			OutputStream output = clientSocket.getOutputStream();
 
-			String text;
+			String requestSpecifics = proxyToClientBufferedReader.readLine();
 
-			do {
-				text = proxyToClientBufferedReader.readLine();
-				System.out.println("Server: " + text);
-			} while (text != null);
+			if(requestSpecifics != null){
+				// TODO: This is the first line of an HTTP request:
+				//  GET http://www.testingmcafeesites.com/ HTTP/1.1
+				// Parse first line, first word, if it is 'GET' then continue
+				// Second word of first line is the URL
+				String[] splitted = requestSpecifics.split("\\s+");
+				if(splitted[0].equals("GET")){
+					if(server.getCache(splitted[1]) != null){
+						sendCachedInfoToClient(server.getCache(splitted[1]));
+					}
+					else{
+						//TODO: call method proxyServertoClient to process the GET request and replace the below
+						do {
+							requestSpecifics = proxyToClientBufferedReader.readLine();
+							System.out.println("Server: " + requestSpecifics);
+						} while (requestSpecifics != null);
+					}
+
+				}
+			}
 
 			clientSocket.close();
 		} catch (IOException ex) {
@@ -104,12 +115,11 @@ public class RequestHandler extends Thread {
 		/**
 		 * To do
 		 * (1) Create a socket to connect to the web server (default port 80)
-		 * (2) Send client's request (clientRequest) to the web server, you may want to use fluch() after writing.
+		 * (2) Send client's request (clientRequest) to the web server, you may want to use flush() after writing.
 		 * (3) Use a while loop to read all responses from web server and send back to client
 		 * (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
 		 * (5) close file, and sockets.
 		 */
-
 		return true;
 	}
 
