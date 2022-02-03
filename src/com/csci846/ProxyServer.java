@@ -46,6 +46,7 @@ public class ProxyServer {
 		 * Create a thread (RequestHandler) for each new client connection
 		 * remember to catch Exceptions!
 		 *
+		 * https://www.codejava.net/java-se/networking/java-socket-server-examples-tcp-ip
 		 */
 		try (ServerSocket proxySocket = new ServerSocket(proxyPort)) {
 
@@ -82,6 +83,16 @@ public class ProxyServer {
 		 * write string (info) to the log file, and add the current time stamp
 		 * e.g. String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
 		 *
+		 */
+
+		/**
+				NOTES: This is how I would write a threadsafe synchronous log
+				Use a dedicated thread for logging and use a queue to source it. See the 'Queue Implementations trails in The Java Tutorials for how to use queues and for sample code that works.
+				https://docs.oracle.com/javase/tutorial/collections/implementations/queue.html
+
+				Java has several synchronized queue classes that you can use. Here is one:
+
+				https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html
 		 */
 	}
 
