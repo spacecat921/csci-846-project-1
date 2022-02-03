@@ -1,9 +1,14 @@
 package com.csci846;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -18,8 +23,6 @@ public class ProxyServer {
 
 	//cache is a Map: the key is the URL and the value is the file name of the file that stores the cached content
 	Map<String, String> cache;
-
-	ServerSocket proxySocket;
 
 	String logFileName = "log.txt";
 
@@ -44,7 +47,21 @@ public class ProxyServer {
 		 * remember to catch Exceptions!
 		 *
 		 */
+		try (ServerSocket proxySocket = new ServerSocket(proxyPort)) {
 
+			System.out.println("Server is listening on port " + proxyPort);
+
+			while (true) {
+				Socket socket = proxySocket.accept();
+				System.out.println("New client connected");
+
+				new RequestHandler(socket, this).start();
+			}
+
+		} catch (IOException ex) {
+			System.out.println("Server exception: " + ex.getMessage());
+			ex.printStackTrace();
+		}
 
 	}
 
