@@ -1,0 +1,7 @@
+Compile using the following:
+
+javac -d out/production/csci846Project1 src/com/csci846/*.java
+
+Start using the following:
+
+java -classpath out/production/csci846Project1 com.csci846.ProxyServer 55555
