@@ -60,6 +60,24 @@ public class RequestHandler extends Thread {
 		 * (3) Otherwise, call method proxyServertoClient to process the GET request
 		 *
 		 */
+		try {
+			InputStream input = clientSocket.getInputStream();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+
+			OutputStream output = clientSocket.getOutputStream();
+
+			String text;
+
+			do {
+				text = reader.readLine();
+				System.out.println("Server: " + text);
+			} while (text != null);
+
+			clientSocket.close();
+		} catch (IOException ex) {
+			System.out.println("Server exception: " + ex.getMessage());
+			ex.printStackTrace();
+		}
 
 	}
 
