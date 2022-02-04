@@ -27,6 +27,13 @@ public class ProxyServer {
 	String logFileName = "log.txt";
 
 	public static void main(String[] args) {
+
+		// Verify args have been set, if else return message
+		if(args.length < 1){
+			System.out.println("Please input a port number (0-65353)");
+			return;
+		}
+
 		new ProxyServer().startServer(Integer.parseInt(args[0]));
 	}
 
