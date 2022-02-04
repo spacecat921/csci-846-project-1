@@ -2,6 +2,7 @@ package com.csci846;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -29,38 +30,24 @@ public class RequestHandler extends Thread {
 
 
 	public RequestHandler(Socket clientSocket, ProxyServer proxyServer) {
-
-
 		this.clientSocket = clientSocket;
-
-
 		this.server = proxyServer;
 
 		try {
 			clientSocket.setSoTimeout(2000);
 			inFromClient = clientSocket.getInputStream();
 			outToClient = clientSocket.getOutputStream();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 
 
 	@Override
 
 	public void run() {
-
-		/**
-		 * To do
-		 * Process the requests from a client. In particular,
-		 * (1) Check the request type, only process GET request and ignore others
-		 * (2) If the url of GET request has been cached, respond with cached content
-		 * (3) Otherwise, call method proxyServertoClient to process the GET request
-		 *
-		 */
 		try {
+			// (1) Check the request type, only process GET request and ignore others
 			proxyToClientBufferedReader = new BufferedReader(new InputStreamReader(inFromClient));
 
 			// Build the request byte array
@@ -72,15 +59,16 @@ public class RequestHandler extends Thread {
 			// TODO: Is this needed to be set here????
 			request = textReceived.toString().getBytes();
 
-			String httpRequest = parseHttpRequest(textReceived);
-			String url = parseUrl(textReceived);
+			String httpRequest = parseHttpRequest(textReceived.toString());
+			String url = parseUrl(textReceived.toString());
 
+			// (2) If the url of GET request has been cached, respond with cached content
 			if(httpRequest.equals("GET")){
 				// If cache exists forward it on
 				if(server.getCache(url) != null){
 					sendCachedInfoToClient(server.getCache(url));
 				}
-				// else proceed to get info
+				// (3) Otherwise, call method proxyServertoClient to process the GET request
 				proxyServertoClient(textReceived.toString().getBytes());
 			}
 
@@ -90,17 +78,6 @@ public class RequestHandler extends Thread {
 			ex.printStackTrace();
 		}
 
-	}
-
-	private String parseHttpRequest(final StringBuilder textReceived) {
-		int firstSpacePosition = textReceived.indexOf(" ");
-		return textReceived.substring(0, firstSpacePosition);
-	}
-
-	private String parseUrl(final StringBuilder textReceived) {
-		int firstSpacePosition = textReceived.indexOf(" ");
-		int secondWordStartPosition = textReceived.indexOf(" ", firstSpacePosition + 1);
-		return textReceived.substring(firstSpacePosition + 1, secondWordStartPosition);
 	}
 
 	private boolean proxyServertoClient(byte[] clientRequest) {
@@ -125,12 +102,57 @@ public class RequestHandler extends Thread {
 		 * (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
 		 * (5) close file, and sockets.
 		 */
+
+		String url = parseUrlFromByteArray(clientRequest);
+		// (1) Create a socket to connect to the web server (default port 80)
+		try (ServerSocket proxySocket = new ServerSocket(80)) {
+			serverSocket = proxySocket.accept();
+			System.out.println("New Outbound client connected");
+
+			serverSocket.setSoTimeout(2000);
+			outToServer =  serverSocket.getOutputStream();
+
+			// (2) Send client's request (clientRequest) to the web server, you may want to use flush() after writing.
+			outToServer.write(clientRequest);
+			outToServer.flush();
+
+			// TODO: (3) Use a while loop to read all responses from web server and send back to client
+			inFromServer = serverSocket.getInputStream();
+//			while(inFromServer){
+//
+//			}
+
+		} catch (IOException ex) {
+			System.out.println("Server exception: " + ex.getMessage());
+			ex.printStackTrace();
+		}
+
+		// (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
+		try (FileOutputStream stream = new FileOutputStream(fileName)) {
+			stream.write(serverReply);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		server.putCache(url,fileName);
+
+		// Close sockets , No need to close file as it is in a try block.
+		try {
+
+			if (serverSocket != null) {
+				serverSocket.close();
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+
+		}
+
 		return true;
 	}
 
-
-
 	// Sends the cached content stored in the cache file to the client
+
 	private void sendCachedInfoToClient(String fileName) {
 
 		try {
@@ -156,6 +178,22 @@ public class RequestHandler extends Thread {
 		}
 	}
 
+
+	private String parseHttpRequest(final String textReceived) {
+		int firstSpacePosition = textReceived.indexOf(" ");
+		return textReceived.substring(0, firstSpacePosition);
+	}
+
+	private String parseUrl(final String textReceived) {
+		int firstSpacePosition = textReceived.indexOf(" ");
+		int secondWordStartPosition = textReceived.indexOf(" ", firstSpacePosition + 1);
+		return textReceived.substring(firstSpacePosition + 1, secondWordStartPosition);
+	}
+
+	private String parseUrlFromByteArray(final byte[] clientRequest) {
+		String byteString = new String(clientRequest, StandardCharsets.UTF_8);
+		return parseUrl(byteString);
+	}
 
 	// Generates a random file name
 	public String generateRandomFileName() {
