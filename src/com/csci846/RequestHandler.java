@@ -61,32 +61,27 @@ public class RequestHandler extends Thread {
 		 *
 		 */
 		try {
-
 			proxyToClientBufferedReader = new BufferedReader(new InputStreamReader(inFromClient));
 
-			OutputStream output = clientSocket.getOutputStream();
+			// Build the request byte array
+			StringBuilder textReceived = new StringBuilder();
+			for(String line = proxyToClientBufferedReader.readLine(); line != null; line = proxyToClientBufferedReader.readLine()){
+				textReceived.append(line);
+			}
 
-			String requestSpecifics = proxyToClientBufferedReader.readLine();
+			// TODO: Is this needed to be set here????
+			request = textReceived.toString().getBytes();
 
-			if(requestSpecifics != null){
-				// TODO: This is the first line of an HTTP request:
-				//  GET http://www.testingmcafeesites.com/ HTTP/1.1
-				// Parse first line, first word, if it is 'GET' then continue
-				// Second word of first line is the URL
-				String[] splitted = requestSpecifics.split("\\s+");
-				if(splitted[0].equals("GET")){
-					if(server.getCache(splitted[1]) != null){
-						sendCachedInfoToClient(server.getCache(splitted[1]));
-					}
-					else{
-						//TODO: call method proxyServertoClient to process the GET request and replace the below
-						do {
-							requestSpecifics = proxyToClientBufferedReader.readLine();
-							System.out.println("Server: " + requestSpecifics);
-						} while (requestSpecifics != null);
-					}
+			String httpRequest = parseHttpRequest(textReceived);
+			String url = parseUrl(textReceived);
 
+			if(httpRequest.equals("GET")){
+				// If cache exists forward it on
+				if(server.getCache(url) != null){
+					sendCachedInfoToClient(server.getCache(url));
 				}
+				// else proceed to get info
+				proxyServertoClient(textReceived.toString().getBytes());
 			}
 
 			clientSocket.close();
@@ -97,6 +92,16 @@ public class RequestHandler extends Thread {
 
 	}
 
+	private String parseHttpRequest(final StringBuilder textReceived) {
+		int firstSpacePosition = textReceived.indexOf(" ");
+		return textReceived.substring(0, firstSpacePosition);
+	}
+
+	private String parseUrl(final StringBuilder textReceived) {
+		int firstSpacePosition = textReceived.indexOf(" ");
+		int secondWordStartPosition = textReceived.indexOf(" ", firstSpacePosition + 1);
+		return textReceived.substring(firstSpacePosition + 1, secondWordStartPosition);
+	}
 
 	private boolean proxyServertoClient(byte[] clientRequest) {
 
