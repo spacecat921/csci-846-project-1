@@ -130,13 +130,6 @@ public class RequestHandler extends Thread {
 				outToClient.write(serverReply, 0, readBytes);
 				outToClient.flush();
 			}
-//			outToClient.write("\n\n".getBytes(StandardCharsets.UTF_8));
-
-//			proxyToClientBufferedWriter = new BufferedWriter(new OutputStreamWriter(outToClient));
-//			proxyToClientBufferedWriter.write(requestBuilder.toString());
-//			proxyToClientBufferedWriter.flush();
-
-			System.out.println("Byte Array");
 		} catch (IOException ex) {
 			System.out.println("++Server exception: " + ex.getMessage());
 			ex.printStackTrace();
