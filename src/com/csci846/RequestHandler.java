@@ -116,6 +116,7 @@ public class RequestHandler extends Thread {
 
 			BufferedWriter proxyToServerBufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
 
+			// Passing through Data from client (browser / postman) to the web server
 			// TODO: Add the two newlines in the builder portion
 			String request = clientRequest + "\r\n";
 			proxyToServerBufferedWriter.write(request);
@@ -123,12 +124,12 @@ public class RequestHandler extends Thread {
 
 			// TODO: (3) Use a while loop to read all responses from web server and send back to client
 
+			// Get data from the web server and passthrough back to the client (browser / postman)
 			int readBytes;
 			while ((readBytes = inFromServer.read(serverReply)) != -1){
 				outToClient.write(serverReply, 0, readBytes);
 				outToClient.flush();
 			}
-			outToClient.flush();
 //			outToClient.write("\n\n".getBytes(StandardCharsets.UTF_8));
 
 //			proxyToClientBufferedWriter = new BufferedWriter(new OutputStreamWriter(outToClient));
@@ -145,10 +146,10 @@ public class RequestHandler extends Thread {
 		try (FileOutputStream stream = new FileOutputStream(fileName)) {
 			stream.write(serverReply);
 			stream.flush();
+			server.putCache(parseUrl(clientRequest),fileName);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		server.putCache(parseUrl(clientRequest),fileName);
 		return true;
 	}
 
