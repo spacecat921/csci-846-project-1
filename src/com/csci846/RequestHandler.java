@@ -8,7 +8,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -54,6 +56,7 @@ public class RequestHandler extends Thread {
 				requestBuilder.append(line).append("\r\n");
 			}
 
+			System.out.println("Request: \n" + requestBuilder);
 			String httpRequest = parseHttpRequest(requestBuilder.toString());
 			String url = parseUrl(requestBuilder.toString());
 
@@ -80,7 +83,7 @@ public class RequestHandler extends Thread {
 
 		FileOutputStream fileWriter = null;
 		Socket serverSocket = null;
-		InputStream inFromServer;
+//		InputStream inFromServer;
 		OutputStream outToServer;
 
 		// Create Buffered output stream to write to cached copy of file
@@ -102,27 +105,42 @@ public class RequestHandler extends Thread {
 		// (1) Create a socket to connect to the web server (default port 80)
 		// No need to close sockets or files as they are in a resource try block.
 		StringBuilder requestBuilder = new StringBuilder();
-		try (Socket proxySocket = new Socket(parseHost(clientRequest),8080)) {
+		System.out.println("HOST: " + parseHost(clientRequest));
+		try (Socket proxySocket = new Socket("localhost", 8080)) {
+			System.out.println("CONNECTED: " + proxySocket.isConnected());
 			System.out.println("New Outbound client connected");
 			// (2) Send client's request (clientRequest) to the web server, you may want to use flush() after writing.
-			proxySocket.setSoTimeout(2000);
+			proxySocket.setSoTimeout(4000);
 			OutputStream outputStream = proxySocket.getOutputStream();
-			outputStream.write(clientRequest.getBytes(StandardCharsets.UTF_8));
-			outputStream.flush();
+			InputStream inFromServer = proxySocket.getInputStream();
+
+			BufferedWriter proxyToServerBufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
+
+			String bla = "GET / HTTP/1.1\n"
+					+ "Host: localhost:8080";
+			proxyToServerBufferedWriter.write(bla);
+			proxyToServerBufferedWriter.flush();
+//			outputStream.write(clientRequest.getBytes(StandardCharsets.UTF_8));
+//			outputStream.flush();
 
 			// TODO: (3) Use a while loop to read all responses from web server and send back to client
-			inFromServer = proxySocket.getInputStream();
-			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inFromServer));
+			InputStreamReader ir = new InputStreamReader(inFromServer);
+			BufferedReader bufferedReader = new BufferedReader(ir);
 
-//			StringBuilder requestBuilder = new StringBuilder();
 			String line;
-			System.out.println("GOT HERE");
+			while ((line = bufferedReader.readLine()) == null) {
+				System.out.println("Waiting");
+				Thread.sleep(500);
+			}
+
+			System.out.println("Buffered loaded + " + line);
+
 			System.out.println("Line:" + bufferedReader.readLine());
 
-			//TODO: FIX THIS!!!!
-			while (!(line = bufferedReader.readLine()).isBlank()) {
-				requestBuilder.append(line).append("\r\n");
-			}
+//			//TODO: FIX THIS!!!!
+//			while (!(line = bufferedReader.readLine()).isBlank()) {
+//				requestBuilder.append(line).append("\r\n");
+//			}
 
 			proxyToClientBufferedWriter = new BufferedWriter(new OutputStreamWriter(outToClient));
 			proxyToClientBufferedWriter.write(requestBuilder.toString());
@@ -130,16 +148,18 @@ public class RequestHandler extends Thread {
 		} catch (IOException ex) {
 			System.out.println("Server exception: " + ex.getMessage());
 			ex.printStackTrace();
-		}
-
-		// (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
-		try (FileOutputStream stream = new FileOutputStream(fileName)) {
-			stream.write(requestBuilder.toString().getBytes(StandardCharsets.UTF_8));
-			stream.flush();
-		} catch (Exception e) {
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		 server.putCache(parseUrl(clientRequest),fileName);
+//
+//		// (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
+//		try (FileOutputStream stream = new FileOutputStream(fileName)) {
+//			stream.write(requestBuilder.toString().getBytes(StandardCharsets.UTF_8));
+//			stream.flush();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		 server.putCache(parseUrl(clientRequest),fileName);
 		return true;
 	}
 
