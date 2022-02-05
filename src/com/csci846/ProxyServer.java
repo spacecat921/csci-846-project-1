@@ -1,21 +1,9 @@
 package com.csci846;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -70,10 +58,7 @@ public class ProxyServer {
 			System.out.println("Server exception: " + ex.getMessage());
 			ex.printStackTrace();
 		}
-
 	}
-
-
 
 	public String getCache(String hashcode) {
 		return cache.get(hashcode);
@@ -102,5 +87,4 @@ public class ProxyServer {
 				https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html
 		 */
 	}
-
 }
