@@ -12,22 +12,16 @@ import java.security.SecureRandom;
 // RequestHandler is thread that process requests of one client connection
 public class RequestHandler extends Thread {
 
-
 	Socket clientSocket;
-
 	InputStream inFromClient;
-
 	OutputStream outToClient;
 
 	byte[] request = new byte[1024];
 
 	BufferedReader proxyToClientBufferedReader;
-
 	BufferedWriter proxyToClientBufferedWriter;
 
-
 	private ProxyServer server;
-
 
 	public RequestHandler(Socket clientSocket, ProxyServer proxyServer) {
 		this.clientSocket = clientSocket;
@@ -42,34 +36,31 @@ public class RequestHandler extends Thread {
 		}
 	}
 
-
 	@Override
-
 	public void run() {
 		try {
 			// (1) Check the request type, only process GET request and ignore others
 			proxyToClientBufferedReader = new BufferedReader(new InputStreamReader(inFromClient));
 
-			// Build the request byte array
-			StringBuilder textReceived = new StringBuilder();
-			for(String line = proxyToClientBufferedReader.readLine(); line != null; line = proxyToClientBufferedReader.readLine()){
-				textReceived.append(line);
+			StringBuilder requestBuilder = new StringBuilder();
+			String line;
+
+			while (!(line = proxyToClientBufferedReader.readLine()).isBlank()) {
+				requestBuilder.append(line).append("\r\n");
 			}
 
-			// TODO: Is this needed to be set here????
-			request = textReceived.toString().getBytes();
-
-			String httpRequest = parseHttpRequest(textReceived.toString());
-			String url = parseUrl(textReceived.toString());
+			String httpRequest = parseHttpRequest(requestBuilder.toString());
+			String url = parseUrl(requestBuilder.toString());
 
 			// (2) If the url of GET request has been cached, respond with cached content
 			if(httpRequest.equals("GET")){
 				// If cache exists forward it on
 				if(server.getCache(url) != null){
+					System.out.println("Cached URL: " + url);
 					sendCachedInfoToClient(server.getCache(url));
 				}
 				// (3) Otherwise, call method proxyServertoClient to process the GET request
-				proxyServertoClient(textReceived.toString().getBytes());
+				proxyServertoClient(requestBuilder.toString());
 			}
 
 			clientSocket.close();
@@ -80,7 +71,7 @@ public class RequestHandler extends Thread {
 
 	}
 
-	private boolean proxyServertoClient(byte[] clientRequest) {
+	private boolean proxyServertoClient(String clientRequest) {
 
 		FileOutputStream fileWriter = null;
 		Socket serverSocket = null;
@@ -103,24 +94,29 @@ public class RequestHandler extends Thread {
 		 * (5) close file, and sockets.
 		 */
 
-		String url = parseUrlFromByteArray(clientRequest);
 		// (1) Create a socket to connect to the web server (default port 80)
-		try (ServerSocket proxySocket = new ServerSocket(80)) {
-			serverSocket = proxySocket.accept();
+		// No need to close sockets or files as they are in a resource try block.
+		try (Socket proxySocket = new Socket(parseHost(clientRequest),80)) {
 			System.out.println("New Outbound client connected");
-
-			serverSocket.setSoTimeout(2000);
-			outToServer =  serverSocket.getOutputStream();
-
 			// (2) Send client's request (clientRequest) to the web server, you may want to use flush() after writing.
-			outToServer.write(clientRequest);
-			outToServer.flush();
+			OutputStream outputStream = proxySocket.getOutputStream();
+			outputStream.write(clientRequest.getBytes());
+			outputStream.flush();
 
 			// TODO: (3) Use a while loop to read all responses from web server and send back to client
-			inFromServer = serverSocket.getInputStream();
-//			while(inFromServer){
-//
-//			}
+			inFromServer = proxySocket.getInputStream();
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inFromServer));
+
+			StringBuilder requestBuilder = new StringBuilder();
+			String line;
+
+			//TODO: FIX THIS!!!!
+			while (!(line = bufferedReader.readLine()).isBlank()) {
+				requestBuilder.append(line).append("\r\n");
+			}
+
+			proxyToClientBufferedWriter = new BufferedWriter(new OutputStreamWriter(outToClient));
+			proxyToClientBufferedWriter.write(requestBuilder.toString());
 
 		} catch (IOException ex) {
 			System.out.println("Server exception: " + ex.getMessage());
@@ -130,24 +126,11 @@ public class RequestHandler extends Thread {
 		// (4) Write the web server's response to a cache file, put the request URL and cache file name to the cache Map
 		try (FileOutputStream stream = new FileOutputStream(fileName)) {
 			stream.write(serverReply);
+			stream.flush();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		server.putCache(url,fileName);
-
-		// Close sockets , No need to close file as it is in a try block.
-		try {
-
-			if (serverSocket != null) {
-				serverSocket.close();
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-
-		}
-
+		 server.putCache(parseUrl(clientRequest),fileName);
 		return true;
 	}
 
@@ -178,21 +161,21 @@ public class RequestHandler extends Thread {
 		}
 	}
 
-
 	private String parseHttpRequest(final String textReceived) {
-		int firstSpacePosition = textReceived.indexOf(" ");
-		return textReceived.substring(0, firstSpacePosition);
+		String[] requestsLines = textReceived.split("\r\n");
+		String[] requestLine = requestsLines[0].split(" ");
+		return requestLine[0];
 	}
 
 	private String parseUrl(final String textReceived) {
-		int firstSpacePosition = textReceived.indexOf(" ");
-		int secondWordStartPosition = textReceived.indexOf(" ", firstSpacePosition + 1);
-		return textReceived.substring(firstSpacePosition + 1, secondWordStartPosition);
+		String[] requestsLines = textReceived.split("\r\n");
+		String[] requestLine = requestsLines[0].split(" ");
+		return requestLine[1];
 	}
 
-	private String parseUrlFromByteArray(final byte[] clientRequest) {
-		String byteString = new String(clientRequest, StandardCharsets.UTF_8);
-		return parseUrl(byteString);
+	private String parseHost(final String textReceived){
+		String[] requestsLines = textReceived.split("\r\n");
+		return requestsLines[1].split(" ")[1];
 	}
 
 	// Generates a random file name
