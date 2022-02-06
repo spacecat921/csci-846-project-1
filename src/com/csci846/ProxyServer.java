@@ -12,10 +12,20 @@ public class ProxyServer {
 	//cache is a Map: the key is the URL and the value is the file name of the file that stores the cached content
 	Map<String, String> cache;
 
-	String logFileName = "log.txt";
+	private String temp;
+	private String logFileName = "proxy.log"; //required name
+	private Queue<String> log_q; 		
+	private FileWriter fw = null;
+
 
 	public static void main(String[] args) {
-
+		//added
+		log_q = new ConcurrentLinkedQueue<>(); 
+		if (!pro_log.exists() || (pro_log.exists() && !pro_log.isDirectory()))
+		{
+			File pro_log = new File(logFileName);			
+		} 
+		// end added
 		// Verify args have been set, if else return message
 		if(args.length < 1){
 			System.out.println("Please input a port number (0-65353)");
@@ -23,6 +33,23 @@ public class ProxyServer {
 		}
 
 		new ProxyServer().startServer(Integer.parseInt(args[0]));
+
+		//added
+		// do i need to close the file? can't use empty q to know to close
+		fw = new FileWriter(logFileName);
+		// idk how to make this run forever
+		try 
+		{			
+			while (log_q.peek().notEqual(null)) //check if empty
+			{
+				fw.write(log_q.poll());
+			}
+		} finally 
+		{
+
+		}
+		//end added
+
 	}
 
 	void startServer(int proxyPort) {
@@ -68,9 +95,9 @@ public class ProxyServer {
 		cache.put(hashcode, fileName);
 	}
 
-	public synchronized void writeLog(String info) {
 
-		/**
+	public synchronized void writeLog(String info) 
+	{	 /*
 		 * To do
 		 * write string (info) to the log file, and add the current time stamp
 		 * e.g. String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
@@ -86,5 +113,15 @@ public class ProxyServer {
 
 				https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html
 		 */
+
+		String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+		synchronized(this) //google suggests that this is how to sync stuff
+		//time stamp happens when the req comes in, not when synced
+		{
+			temp = info;
+		}
+		log_q.add(timeStamp + " " + info);
+
+
 	}
 }
